@@ -60,6 +60,7 @@ make train
 make evaluate
 make score
 make monitor
+make visuals
 ```
 
 Run checks:
@@ -74,6 +75,50 @@ Start the dashboard:
 ```bash
 make dashboard
 ```
+
+## Visual walkthrough
+
+The figures below are generated from local pipeline outputs. Run `make sample`, `make train`, `make score`, `make monitor`, and `make visuals` to regenerate them.
+
+Generated from local sample run.
+
+### Streamlit dashboard overview
+
+![Dashboard overview](docs/assets/dashboard-overview.png)
+
+### Risk distribution and risk bands
+
+![Risk distribution and risk bands](docs/assets/risk-distribution.png)
+
+### Threshold analysis
+
+![Threshold analysis](docs/assets/threshold-analysis.png)
+
+### Feature importance
+
+![Feature importance](docs/assets/feature-importance.png)
+
+### Monitoring snapshot
+
+![Monitoring snapshot](docs/assets/monitoring-snapshot.png)
+
+### API scoring example
+
+Run the API after `make train`:
+
+```bash
+python3 -m uvicorn api.main:app --reload
+```
+
+Score a component record:
+
+```bash
+curl -X POST http://127.0.0.1:8000/score \
+  -H "Content-Type: application/json" \
+  -d '{"records":[{"Id":1,"L0_S0_F0":0.03,"L0_S0_F2":-0.034}]}'
+```
+
+The response includes `risk_score`, `decision_threshold`, `is_actionable`, `risk_band`, `recommended_action`, `model_version`, and `scoring_timestamp`.
 
 ## Pipeline outputs
 

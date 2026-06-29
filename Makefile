@@ -1,4 +1,4 @@
-.PHONY: install sample train evaluate score dashboard test lint format monitor api
+.PHONY: install sample train evaluate score dashboard test lint format monitor api visuals
 
 PYTHON ?= python3
 
@@ -19,6 +19,9 @@ score:
 
 monitor:
 	$(PYTHON) -m src.monitoring
+
+visuals:
+	$(PYTHON) scripts/generate_readme_assets.py
 
 dashboard:
 	$(PYTHON) -m streamlit run dashboard/app.py
