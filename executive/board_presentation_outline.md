@@ -2,7 +2,7 @@
 
 ## 1. Executive Thesis
 
-Predictive quality AI can improve manufacturing resilience when paired with enterprise-grade governance, monitoring, and human accountability.
+Predictive quality AI can improve manufacturing resilience when paired with clear governance, monitoring, and human accountability.
 
 ## 2. Business Problem
 
@@ -47,4 +47,3 @@ Outline station mapping, data lineage, shadow scoring, threshold tuning, monitor
 ## 12. Final Recommendation
 
 Approve a governed pilot for inspection prioritization. Defer autonomous production control until performance, explainability, and operational controls are proven.
-

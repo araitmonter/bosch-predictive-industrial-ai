@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
 
 from .config import SAMPLE_DIR, DatasetFiles, get_dataset_files
+from .feature_metadata import build_feature_metadata
 
 
 def read_csv_any(path: Path, **kwargs) -> pd.DataFrame:
@@ -97,10 +97,13 @@ def sample_training_data(
 
 
 def feature_engineer(df: pd.DataFrame) -> pd.DataFrame:
-    """Add compact manufacturing-readiness features without requiring station metadata."""
+    """Add compact features that describe process coverage and timing."""
 
     engineered = df.copy()
     feature_cols = [col for col in engineered.columns if col not in {"Id", "Response"}]
+    if not feature_cols:
+        return engineered
+
     engineered["missing_feature_count"] = engineered[feature_cols].isna().sum(axis=1)
     engineered["observed_feature_count"] = engineered[feature_cols].notna().sum(axis=1)
 
@@ -108,8 +111,70 @@ def feature_engineer(df: pd.DataFrame) -> pd.DataFrame:
     if date_cols:
         engineered["process_time_min"] = engineered[date_cols].min(axis=1)
         engineered["process_time_max"] = engineered[date_cols].max(axis=1)
-        engineered["process_time_span"] = engineered["process_time_max"] - engineered["process_time_min"]
+        engineered["process_time_span"] = (
+            engineered["process_time_max"] - engineered["process_time_min"]
+        )
+
+    metadata = build_feature_metadata(feature_cols)
+    metadata = metadata.dropna(subset=["line", "station"])
+    station_map = {
+        int(station): cols["column"].tolist()
+        for station, cols in metadata.groupby("station", sort=True)
+    }
+    line_map = {
+        int(line): cols["column"].tolist() for line, cols in metadata.groupby("line", sort=True)
+    }
+
+    if station_map:
+        station_observed = pd.DataFrame(
+            {
+                station: engineered[[col for col in cols if col in engineered]].notna().any(axis=1)
+                for station, cols in station_map.items()
+            },
+            index=engineered.index,
+        )
+        engineered["station_coverage_count"] = station_observed.sum(axis=1)
+        engineered["first_observed_station"] = station_observed.apply(_first_true_column, axis=1)
+        engineered["last_observed_station"] = station_observed.apply(_last_true_column, axis=1)
+        engineered["station_transition_count"] = station_observed.apply(
+            lambda row: _transition_count(row.to_numpy(dtype=bool)),
+            axis=1,
+        )
+    else:
+        engineered["station_coverage_count"] = 0
+        engineered["first_observed_station"] = np.nan
+        engineered["last_observed_station"] = np.nan
+        engineered["station_transition_count"] = 0
+
+    if line_map:
+        line_observed = pd.DataFrame(
+            {
+                line: engineered[[col for col in cols if col in engineered]].notna().any(axis=1)
+                for line, cols in line_map.items()
+            },
+            index=engineered.index,
+        )
+        engineered["line_coverage_count"] = line_observed.sum(axis=1)
+    else:
+        engineered["line_coverage_count"] = 0
+
     return engineered
+
+
+def _first_true_column(row: pd.Series) -> float:
+    observed = row[row]
+    return float(observed.index[0]) if not observed.empty else np.nan
+
+
+def _last_true_column(row: pd.Series) -> float:
+    observed = row[row]
+    return float(observed.index[-1]) if not observed.empty else np.nan
+
+
+def _transition_count(values: np.ndarray) -> int:
+    if values.size < 2:
+        return 0
+    return int(np.sum(values[1:] != values[:-1]))
 
 
 def split_features_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
@@ -158,4 +223,3 @@ def prepare_model_matrix(X: pd.DataFrame, categorical_limit: int = 30) -> pd.Dat
     X_model = pd.get_dummies(X_model, columns=categorical, dummy_na=True)
     medians = X_model.median(numeric_only=True)
     return X_model.fillna(medians).fillna(0)
-

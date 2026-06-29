@@ -15,7 +15,9 @@ class QualityThresholds:
     max_duplicate_id_rate: float = 0.001
 
 
-def quality_profile(df: pd.DataFrame, thresholds: QualityThresholds | None = None) -> dict[str, float | int]:
+def quality_profile(
+    df: pd.DataFrame, thresholds: QualityThresholds | None = None
+) -> dict[str, float | int]:
     """Compute core quality and readiness indicators."""
 
     thresholds = thresholds or QualityThresholds()
@@ -29,12 +31,16 @@ def quality_profile(df: pd.DataFrame, thresholds: QualityThresholds | None = Non
         "columns": int(df.shape[1]),
         "feature_count": int(len(feature_cols)),
         "target_positive_rate": target_rate,
-        "overall_missing_rate": float(df[feature_cols].isna().mean().mean()) if feature_cols else 0.0,
+        "overall_missing_rate": float(df[feature_cols].isna().mean().mean())
+        if feature_cols
+        else 0.0,
         "columns_above_70pct_null": int((missing_by_col > thresholds.high_null_rate).sum()),
         "columns_above_95pct_null": int((missing_by_col > thresholds.excessive_null_rate).sum()),
         "duplicate_id_rate": duplicate_rate,
         "duplicate_id_count": int(df["Id"].duplicated().sum()) if "Id" in df else 0,
-        "constant_feature_count": int(sum(df[col].nunique(dropna=True) <= 1 for col in feature_cols)),
+        "constant_feature_count": int(
+            sum(df[col].nunique(dropna=True) <= 1 for col in feature_cols)
+        ),
     }
 
 
@@ -53,7 +59,9 @@ def readiness_score(profile: dict[str, float | int]) -> dict[str, int]:
     predictive = 80 if 0 < positive_rate < 0.10 else 64
     governance = 62 if excessive_null_cols / feature_count > 0.15 else 72
     monitoring = 60
-    total = round(np.mean([completeness, consistency, traceability, predictive, governance, monitoring]))
+    total = round(
+        np.mean([completeness, consistency, traceability, predictive, governance, monitoring])
+    )
 
     return {
         "Completeness": int(completeness),
@@ -97,4 +105,3 @@ def identify_data_quality_risks(df: pd.DataFrame) -> pd.DataFrame:
         },
     ]
     return pd.DataFrame(rows)
-

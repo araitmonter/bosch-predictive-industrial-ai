@@ -1,5 +1,5 @@
 metric,baseline,current,alert_level
 Data quality score,100.0,92.0,Amber
 Missing rate,0.0,0.08,Amber
-Prediction PSI,0.0,0.4171,Red
+Prediction PSI,0.0,3.3991,Red
 Retraining trigger,0.0,1.0,Red

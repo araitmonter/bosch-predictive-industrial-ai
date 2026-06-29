@@ -1,2 +1,2 @@
-model_version,roc_auc,pr_auc,precision,recall,f1,false_negative_rate,decision_threshold,data_quality_score
-v0.1-governed-prototype,0.71,0.13,0.18,0.76,0.29,0.24,0.18,86.0
+roc_auc,pr_auc,precision,recall,f1,false_negative_rate,decision_threshold,data_quality_score,model_version
+0.5890470805921053,0.136932211863839,0.22580645161290322,0.18421052631578946,0.2028985507246377,0.8157894736842105,0.01,19.53,bosch-quality-risk-v0.2

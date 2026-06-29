@@ -6,12 +6,12 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 SAMPLE_DIR = DATA_DIR / "sample"
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 MODEL_DIR = PROJECT_ROOT / "models"
 
@@ -44,7 +44,9 @@ def resolve_source_dir() -> Path:
     candidates = (Path(env_path).expanduser(),) if env_path else DEFAULT_SOURCE_CANDIDATES
     for candidate in candidates:
         if candidate and candidate.exists():
-            if (candidate / "train_numeric.csv.zip").exists() or (candidate / "train_numeric.csv").exists():
+            if (candidate / "train_numeric.csv.zip").exists() or (
+                candidate / "train_numeric.csv"
+            ).exists():
                 return candidate
     return RAW_DIR
 
@@ -87,3 +89,4 @@ RISK_BANDS = {
     "Critical risk: escalate": (0.60, 1.01),
 }
 
+MODEL_VERSION = "bosch-quality-risk-v0.2"

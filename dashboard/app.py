@@ -1,7 +1,8 @@
-"""Executive Streamlit dashboard for responsible industrial AI quality risk."""
+"""Streamlit dashboard for Bosch predictive quality outputs."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -9,26 +10,19 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-
 ROOT = Path(__file__).resolve().parents[1]
+ARTIFACTS_DIR = ROOT / "artifacts"
 SAMPLE_DIR = ROOT / "data" / "sample"
 
 
 st.set_page_config(
-    page_title="Responsible Industrial AI | Manufacturing Quality",
+    page_title="Bosch Predictive Quality",
     layout="wide",
 )
 
 
 CSS = """
 <style>
-:root {
-  --bosch-red: #e20015;
-  --black: #111111;
-  --dark-gray: #2d2f33;
-  --light-gray: #f3f4f6;
-  --steel: #607987;
-}
 .main { background: #ffffff; color: #111111; }
 h1, h2, h3 { color: #111111; letter-spacing: 0; }
 div[data-testid="stMetric"] {
@@ -44,70 +38,118 @@ div[data-testid="stMetric"] {
   padding: 14px 18px;
   border-radius: 4px;
 }
-.small-note { color: #5c6670; font-size: 0.92rem; }
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
 
-def synthetic_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def demo_outputs() -> tuple[pd.DataFrame, dict[str, float | str], pd.DataFrame, pd.DataFrame, bool]:
     rng = np.random.default_rng(42)
-    n = 1200
-    scores = np.clip(rng.beta(1.4, 14, n), 0, 0.98)
+    scores = np.clip(rng.beta(1.4, 14, 1200), 0, 0.98)
     bands = pd.cut(
         scores,
         bins=[0, 0.10, 0.30, 0.60, 1.01],
-        labels=["Low risk: pass", "Medium risk: monitor", "High risk: inspect", "Critical risk: escalate"],
+        labels=[
+            "Low risk: pass",
+            "Medium risk: monitor",
+            "High risk: inspect",
+            "Critical risk: escalate",
+        ],
         include_lowest=True,
     )
-    scored = pd.DataFrame({"Id": np.arange(1, n + 1), "risk_score": scores, "risk_band": bands})
-    metrics = pd.DataFrame(
-        [
-            {
-                "model_version": "v0.1-governed-prototype",
-                "roc_auc": 0.71,
-                "pr_auc": 0.13,
-                "precision": 0.18,
-                "recall": 0.76,
-                "f1": 0.29,
-                "false_negative_rate": 0.24,
-                "decision_threshold": 0.18,
-                "data_quality_score": 86.0,
-            }
-        ]
+    scored = pd.DataFrame(
+        {
+            "Id": np.arange(1, len(scores) + 1),
+            "risk_score": scores,
+            "risk_band": bands,
+            "is_actionable": scores >= 0.18,
+        },
     )
+    metrics = {
+        "model_version": "demo",
+        "roc_auc": 0.0,
+        "pr_auc": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "false_negative_rate": 0.0,
+        "decision_threshold": 0.18,
+        "data_quality_score": 0.0,
+    }
     importance = pd.DataFrame(
-        {"feature": [f"L{i % 4}_S{i}_F{i * 3}" for i in range(1, 16)], "importance": np.linspace(0.18, 0.02, 15)}
+        {
+            "feature": [f"L{i % 4}_S{i}_F{i * 3}" for i in range(1, 16)],
+            "importance": np.linspace(0.18, 0.02, 15),
+        },
     )
     monitoring = pd.DataFrame(
         {
-            "metric": ["Data quality score", "Missing rate", "Prediction PSI", "Retraining trigger"],
-            "baseline": [91.2, 0.088, 0.0, 0],
-            "current": [83.4, 0.168, 0.18, 0],
-            "alert_level": ["Amber", "Amber", "Amber", "Green"],
-        }
+            "metric": ["Prediction PSI", "Missing rate delta", "Feature alerts"],
+            "current": [0.0, 0.0, 0],
+            "alert_level": ["Demo", "Demo", "Demo"],
+        },
     )
-    return scored, metrics, importance, monitoring
+    return scored, metrics, importance, monitoring, True
 
 
 @st.cache_data
-def load_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_outputs() -> tuple[pd.DataFrame, dict[str, float | str], pd.DataFrame, pd.DataFrame, bool]:
     try:
         scored = pd.read_csv(SAMPLE_DIR / "scored_components_sample.csv")
-        metrics = pd.read_csv(SAMPLE_DIR / "model_metrics.csv")
-        importance = pd.read_csv(SAMPLE_DIR / "feature_importance.csv")
-        monitoring = pd.read_csv(SAMPLE_DIR / "monitoring_snapshot.csv")
-        return scored, metrics, importance, monitoring
+        metrics = json.loads((ARTIFACTS_DIR / "metrics.json").read_text(encoding="utf-8"))
+        metadata = json.loads((ARTIFACTS_DIR / "model_metadata.json").read_text(encoding="utf-8"))
+        importance = pd.read_csv(ARTIFACTS_DIR / "feature_importance.csv")
+        monitoring = load_monitoring_table()
+        metrics["model_version"] = metadata.get("model_version", "unknown")
+        return scored, metrics, importance, monitoring, False
     except Exception:
-        return synthetic_outputs()
+        return demo_outputs()
 
 
-scored, metrics, importance, monitoring = load_outputs()
-metric = metrics.iloc[0]
+def load_monitoring_table() -> pd.DataFrame:
+    snapshot_path = ARTIFACTS_DIR / "monitoring_snapshot.json"
+    if not snapshot_path.exists():
+        return pd.DataFrame(
+            {
+                "metric": ["Monitoring"],
+                "current": ["Run `make monitor`"],
+                "alert_level": ["Not available"],
+            },
+        )
+
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    prediction = snapshot.get("prediction_drift", {})
+    missingness = snapshot.get("missingness_drift", {})
+    return pd.DataFrame(
+        [
+            {
+                "metric": "Prediction PSI",
+                "current": prediction.get("prediction_psi"),
+                "alert_level": prediction.get("alert"),
+            },
+            {
+                "metric": "Missing rate delta",
+                "current": missingness.get("missing_rate_delta"),
+                "alert_level": missingness.get("alert"),
+            },
+            {
+                "metric": "Feature alerts",
+                "current": snapshot.get("feature_alert_count"),
+                "alert_level": "red" if snapshot.get("retraining_alert") else "green",
+            },
+        ],
+    )
 
 
-st.title("Responsible Industrial AI for Manufacturing Quality")
-st.caption("Predictive quality, governed risk scoring, and executive decision intelligence")
+scored, metrics, importance, monitoring, demo_mode = load_outputs()
+
+st.title("Responsible Industrial AI for Bosch Manufacturing Quality")
+st.caption("Predictive quality risk scoring, validation, monitoring, and governance controls")
+
+if demo_mode:
+    st.warning(
+        "Demo mode: synthetic outputs. Run the training pipeline to generate real model outputs."
+    )
 
 page = st.sidebar.radio(
     "Dashboard",
@@ -120,13 +162,18 @@ page = st.sidebar.radio(
 )
 st.sidebar.markdown("---")
 st.sidebar.write("Model version")
-st.sidebar.markdown(f"**{metric.get('model_version', 'v0.1')}**")
+st.sidebar.markdown(f"**{metrics.get('model_version', 'unknown')}**")
 st.sidebar.write("Decision threshold")
-st.sidebar.markdown(f"**{metric.get('decision_threshold', 0.18):.2f}**")
+st.sidebar.markdown(f"**{float(metrics.get('decision_threshold', 0.0)):.2f}**")
 
 
 def risk_band_counts() -> pd.DataFrame:
-    order = ["Low risk: pass", "Medium risk: monitor", "High risk: inspect", "Critical risk: escalate"]
+    order = [
+        "Low risk: pass",
+        "Medium risk: monitor",
+        "High risk: inspect",
+        "Critical risk: escalate",
+    ]
     counts = scored["risk_band"].value_counts().reindex(order, fill_value=0).reset_index()
     counts.columns = ["risk_band", "components"]
     return counts
@@ -134,22 +181,45 @@ def risk_band_counts() -> pd.DataFrame:
 
 if page == "Executive Overview":
     high_risk = scored[scored["risk_band"].isin(["High risk: inspect", "Critical risk: escalate"])]
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Predicted Defect Risk", f"{scored['risk_score'].mean():.1%}")
-    c2.metric("High-Risk Components", f"{len(high_risk):,}")
-    c3.metric("Recall", f"{metric.get('recall', 0.76):.0%}")
-    c4.metric("False Negative Risk", f"{metric.get('false_negative_rate', 0.24):.0%}")
-    c5.metric("Data Quality Score", f"{metric.get('data_quality_score', 86.0):.0f}/100")
+    actionable = int(scored.get("is_actionable", pd.Series(False, index=scored.index)).sum())
 
-    st.markdown('<div class="status-band"><b>Operational risk level:</b> Amber. Suitable for controlled pilot with human review, not autonomous production release.</div>', unsafe_allow_html=True)
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Mean Risk Score", f"{scored['risk_score'].mean():.1%}")
+    c2.metric("Actionable Components", f"{actionable:,}")
+    c3.metric("High-Risk Components", f"{len(high_risk):,}")
+    c4.metric("Recall", f"{float(metrics.get('recall', 0.0)):.0%}")
+    c5.metric("False Negative Rate", f"{float(metrics.get('false_negative_rate', 0.0)):.0%}")
+
+    st.markdown(
+        '<div class="status-band"><b>Operating status:</b> prototype outputs. '
+        "Use as inspection decision support only.</div>",
+        unsafe_allow_html=True,
+    )
     left, right = st.columns([1.1, 0.9])
     with left:
         fig = px.histogram(scored, x="risk_score", nbins=40, color_discrete_sequence=["#e20015"])
-        fig.update_layout(title="Risk Score Distribution", xaxis_title="Risk score", yaxis_title="Components", template="plotly_white")
+        fig.update_layout(
+            title="Risk Score Distribution",
+            xaxis_title="Risk score",
+            yaxis_title="Components",
+            template="plotly_white",
+        )
         st.plotly_chart(fig, use_container_width=True)
     with right:
-        fig = px.bar(risk_band_counts(), x="risk_band", y="components", color="risk_band", color_discrete_sequence=["#607987", "#9aa6ad", "#e20015", "#111111"])
-        fig.update_layout(title="Decision Bands", xaxis_title="", yaxis_title="Components", showlegend=False, template="plotly_white")
+        fig = px.bar(
+            risk_band_counts(),
+            x="risk_band",
+            y="components",
+            color="risk_band",
+            color_discrete_sequence=["#607987", "#9aa6ad", "#e20015", "#111111"],
+        )
+        fig.update_layout(
+            title="Decision Bands",
+            xaxis_title="",
+            yaxis_title="Components",
+            showlegend=False,
+            template="plotly_white",
+        )
         st.plotly_chart(fig, use_container_width=True)
 
 elif page == "Production Risk Intelligence":
@@ -157,28 +227,39 @@ elif page == "Production Risk Intelligence":
     left, right = st.columns([1, 1])
     with left:
         st.dataframe(
-            scored.sort_values("risk_score", ascending=False).head(25),
-            use_container_width=True,
-            hide_index=True,
+            scored.sort_values("risk_score", ascending=False).head(25), use_container_width=True
         )
     with right:
-        fig = px.bar(importance.head(12), x="importance", y="feature", orientation="h", color_discrete_sequence=["#e20015"])
-        fig.update_layout(title="Top Risk Drivers", xaxis_title="Relative importance", yaxis_title="", template="plotly_white")
+        fig = px.bar(
+            importance.head(12),
+            x="importance",
+            y="feature",
+            orientation="h",
+            color_discrete_sequence=["#e20015"],
+        )
+        fig.update_layout(
+            title="Top Model Features",
+            xaxis_title="Importance",
+            yaxis_title="",
+            template="plotly_white",
+        )
         st.plotly_chart(fig, use_container_width=True)
     st.markdown(
-        "**Decision logic:** low-risk components continue normal flow; medium-risk components are monitored; high-risk components route to inspection; critical-risk components escalate to quality leadership."
+        "The action flag is based on the trained decision threshold. Risk bands remain a separate "
+        "communication layer for quality operations."
     )
 
 elif page == "AI Governance & Monitoring":
     st.subheader("AI Governance & Monitoring")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("ROC-AUC", f"{metric.get('roc_auc', 0.71):.2f}")
-    c2.metric("PR-AUC", f"{metric.get('pr_auc', 0.13):.2f}")
-    c3.metric("Precision", f"{metric.get('precision', 0.18):.0%}")
-    c4.metric("F1", f"{metric.get('f1', 0.29):.2f}")
+    c1.metric("ROC-AUC", f"{float(metrics.get('roc_auc', 0.0)):.2f}")
+    c2.metric("PR-AUC", f"{float(metrics.get('pr_auc', 0.0)):.2f}")
+    c3.metric("Precision", f"{float(metrics.get('precision', 0.0)):.0%}")
+    c4.metric("F1", f"{float(metrics.get('f1', 0.0)):.2f}")
     st.dataframe(monitoring, use_container_width=True, hide_index=True)
     st.markdown(
-        '<div class="status-band"><b>Governance status:</b> Controlled prototype. Deployment requires station mapping, model approval, monitoring baseline, and human-in-the-loop workflow sign-off.</div>',
+        '<div class="status-band"><b>Validation note:</b> the default holdout is lightweight. '
+        "Operational validation should use event-time data and decision-point feature availability.</div>",
         unsafe_allow_html=True,
     )
 
@@ -186,20 +267,15 @@ elif page == "Strategic Recommendation":
     st.subheader("Strategic Recommendation")
     st.markdown(
         """
-**Recommendation:** advance to a 90-day governed pilot focused on inspection prioritization, not autonomous production control.
+**Recommendation:** use the prototype for shadow scoring and inspection-prioritization analysis.
 
-**90-day roadmap**
+**Near-term work**
 
-1. Weeks 1-3: confirm data lineage, station mapping, target definition, and quality-owner sign-off.
-2. Weeks 4-6: build production-grade feature pipelines, validation gates, and model registry workflow.
-3. Weeks 7-9: run shadow scoring against live or recent production history.
-4. Weeks 10-12: review false-negative risk, inspection capacity, explainability, and operating policy.
+1. Map influential anonymized features to real stations and tests.
+2. Replace ID-based holdout with event-time validation.
+3. Add inspection capacity and cost assumptions to threshold selection.
+4. Monitor missingness, prediction drift, and false-negative rate as labels arrive.
 
-**Primary deployment risks**
-
-- Rare failures make false negatives the central risk.
-- Anonymized features must be mapped to real stations before actioning explanations.
-- Data drift can occur after process or equipment changes.
-- Human review is required for high and critical risk decisions.
+**Do not use this model for autonomous production control.**
 """
     )

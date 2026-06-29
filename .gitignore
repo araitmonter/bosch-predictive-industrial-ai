@@ -8,6 +8,7 @@ env/
 .env
 mlruns/
 models/
+artifacts/
 *.pkl
 *.joblib
 data/raw/*.csv
@@ -15,4 +16,3 @@ data/raw/*.zip
 data/processed/*.parquet
 data/processed/*.pkl
 reports/figures/
-
