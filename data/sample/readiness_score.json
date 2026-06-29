@@ -1,0 +1,23 @@
+{
+  "profile": {
+    "rows": 2197,
+    "columns": 182,
+    "feature_count": 180,
+    "target_positive_rate": 0.07692307692307693,
+    "overall_missing_rate": 0.8493627674101047,
+    "columns_above_70pct_null": 154,
+    "columns_above_95pct_null": 107,
+    "duplicate_id_rate": 0.0,
+    "duplicate_id_count": 0,
+    "constant_feature_count": 49
+  },
+  "scorecard": {
+    "Completeness": 35,
+    "Consistency": 100,
+    "Traceability": 68,
+    "Predictive readiness": 80,
+    "Governance readiness": 62,
+    "Monitoring readiness": 60,
+    "Overall AI readiness": 68
+  }
+}

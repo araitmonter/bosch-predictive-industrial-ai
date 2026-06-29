@@ -1,0 +1,2 @@
+model_version,roc_auc,pr_auc,precision,recall,f1,false_negative_rate,decision_threshold,data_quality_score
+v0.1-governed-prototype,0.71,0.13,0.18,0.76,0.29,0.24,0.18,86.0
