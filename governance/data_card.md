@@ -47,4 +47,4 @@ Retention should align with quality audit requirements, warranty risk, regulator
 
 ## Lineage Assumptions
 
-Deployment requires lineage from source station systems through ingestion, transformation, feature store, model version, dashboard, and final operational decision.
+Deployment requires lineage from source station systems through ingestion, feature processing, feature store, model version, dashboard, and final operational decision.

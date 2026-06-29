@@ -1,1 +1,1 @@
-"""Responsible Industrial AI for Bosch Manufacturing Quality."""
+"""Bosch Manufacturing Quality Intelligence."""

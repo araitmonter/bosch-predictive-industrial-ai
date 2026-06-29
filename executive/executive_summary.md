@@ -2,7 +2,7 @@
 
 ## Thesis
 
-Predictive quality AI can improve manufacturing decision intelligence when it is treated as a governed operating capability, not only as a machine learning model. The Bosch Production Line Performance dataset provides a strong public proxy for the technical challenge: rare internal failures, wide station-level feature space, and sparse anonymized measurements.
+Predictive quality AI can improve manufacturing decision intelligence when it is treated as a governed operating capability. The Bosch Production Line Performance dataset provides a strong public proxy for the technical challenge: rare internal failures, wide station-level feature space, and sparse anonymized measurements.
 
 ## What Was Built
 
@@ -28,4 +28,3 @@ The solution is appropriate for a controlled pilot. Production deployment requir
 ## Recommendation
 
 Advance to a 90-day pilot focused on shadow scoring and inspection prioritization. Use the pilot to quantify operational value, validate false-negative risk, and create the governance evidence needed for responsible deployment.
-

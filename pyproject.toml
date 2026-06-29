@@ -1,7 +1,7 @@
 [project]
 name = "bosch-predictive-industrial-ai"
 version = "0.2.0"
-description = "Lightweight predictive quality prototype using the Bosch Production Line Performance dataset."
+description = "Bosch Manufacturing Quality Intelligence case study using the public Bosch Production Line Performance dataset."
 requires-python = ">=3.9"
 readme = "README.md"
 

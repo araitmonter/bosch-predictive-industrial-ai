@@ -16,7 +16,7 @@ SAMPLE_DIR = ROOT / "data" / "sample"
 
 
 st.set_page_config(
-    page_title="Bosch Predictive Quality",
+    page_title="Bosch Manufacturing Quality Intelligence",
     layout="wide",
 )
 
@@ -143,8 +143,10 @@ def load_monitoring_table() -> pd.DataFrame:
 
 scored, metrics, importance, monitoring, demo_mode = load_outputs()
 
-st.title("Responsible Industrial AI for Bosch Manufacturing Quality")
-st.caption("Predictive quality risk scoring, validation, monitoring, and governance controls")
+st.title("Bosch Manufacturing Quality Intelligence")
+st.caption(
+    "Predictive risk scoring, inspection prioritization, and AI governance for industrial operations"
+)
 
 if demo_mode:
     st.warning(

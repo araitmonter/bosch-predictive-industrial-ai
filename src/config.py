@@ -1,4 +1,4 @@
-"""Project configuration for Responsible Industrial AI for Bosch Manufacturing Quality."""
+"""Project configuration for Bosch Manufacturing Quality Intelligence."""
 
 from __future__ import annotations
 
